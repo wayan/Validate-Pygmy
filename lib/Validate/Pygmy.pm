@@ -23,13 +23,6 @@ our @EXPORT_OK = (
 
     # apply check only when value is supplied
     'if_supplied',
-
-    # some basic checks
-    'is_required_check',
-    'is_array_check',
-    'is_record_check',
-    'is_nonempty_array_check',
-
 );
 
 use Ref::Util qw(is_arrayref is_hashref is_ref is_coderef);
@@ -94,7 +87,7 @@ sub record_check {
 
     my @checks = _expand_field_checks($checks_arg);
 
-    return sub {
+    return if_supplied sub {
         my ($data) = @_;
 
         is_hashref($data) or return "Value not a record";
@@ -148,7 +141,7 @@ sub array_check {
 
     my @checks = _expand_checks($check_arg);
 
-    return sub {
+    return if_supplied sub {
         my ($data) = @_;
         is_arrayref($data) or return "Value not an array";
 
