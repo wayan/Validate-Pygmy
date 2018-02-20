@@ -1,9 +1,26 @@
 use common::sense;
 use Test::More;
+use Ref::Util qw(is_hashref);
 
 use Validate::Pygmy
-    qw(validate array_check record_check is_required_check if_supplied is_record_check validate_any);
+    qw(validate array_check record_check if_supplied validate_any);
 
+sub is_required_check {
+    return sub {
+        my ($v, $data, $field) = @_;
+        if ( is_hashref($data) && $field ) {
+            exists $data->{$field} or return "Value is required";
+        }
+        return;
+    };
+}
+
+sub is_record_check {
+    return sub {
+        my ($v ) = @_;
+        return is_hashref($v) ? undef: "Value not a record";
+    };
+}
 
 is_deeply(
     validate_any(

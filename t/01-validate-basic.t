@@ -1,8 +1,19 @@
 use common::sense;
 use Test::More;
+use Ref::Util qw(is_hashref);
 
 use Validate::Pygmy
-    qw(validate array_check record_check is_required_check if_supplied);
+    qw(validate array_check record_check if_supplied);
+
+sub is_required_check {
+    return sub {
+        my ($v, $data, $field) = @_;
+        if ( is_hashref($data) && $field ) {
+            exists $data->{$field} or return "Value is required";
+        }
+        return;
+    };
+}
 
 my @checks = (
     customer => record_check( [ id => is_required_check(), ] ),
