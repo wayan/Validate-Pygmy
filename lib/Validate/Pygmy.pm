@@ -350,10 +350,18 @@ __END__
     use common::sense;
 
     use Validate::Pygmy
-        qw(validate array_check record_check is_required_check if_supplied);
+        qw(validate array_check record_check if_supplied);
+
+    sub is_supplied_check {
+        return sub {
+            my ($v, $fields, $name) = @_;
+
+            return exists $v->{$name}? undef: "Value is required";
+        };
+    }
 
     my @checks = (
-        customer => record_check( [ id => is_required_check(), ] ),
+        customer => record_check( [ id => is_supplied_check(), ] ),
         name => sub {
             my ($v) = @_;
             my $minlen = 6;
@@ -363,8 +371,8 @@ __END__
         },
         addresses => array_check(
             record_check(
-                [   city    => is_required_check(),
-                    street  => is_required_check(),
+                [   city    => is_supplied_check(),
+                    street  => is_supplied_check(),
                     country => if_supplied(
                         sub {
                             my ($country) = @_;
