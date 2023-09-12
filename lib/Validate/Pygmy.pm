@@ -11,6 +11,7 @@ our @EXPORT_OK = (
     'validate',
     'validate_record',
     'validate_any',
+    'validate_all',
     'validate_array',
 
     # nested checks
@@ -186,38 +187,42 @@ sub array_check {
     };
 }
 
-sub validate_any {
-    my ( $data, $check_arg ) = @_;
+sub _validate_any {
+    my ($all) = @_;
 
-    my @checks = _expand_checks($check_arg);
+    return sub {
+        my ( $data, $check_arg ) = @_;
 
-    my ( $nok, @errors );
-CHECK: for my $check (@checks) {
-        next CHECK if $nok;
-        my $res = $check->($data);
-        defined($res) or next CHECK;
+        my ( $nok, @errors );
+      CHECK: for my $check ( _expand_checks($check_arg) ) {
+            last CHECK if $nok && !$all;
+            my $res = $check->($data);
 
-        if ( !is_ref($res) ) {
-            push @errors, { message => $res, path => _scalar_jpath() };
-            $nok = 1;
-            last CHECK;
+            defined($res) or next CHECK;
+
+            if ( !is_ref($res) ) {
+                push @errors, { message => $res, path => _scalar_jpath() };
+                $nok = 1;
+            }
+            elsif ( is_validation_failure($res) ) {
+                push @errors, @{ $res->{errors} };
+                $nok = 1;
+            }
+            elsif ( is_validation_success($res) ) {
+                $data = $res->{data};
+            }
+            else {
+                confess "Check returned unexpected value: '$res'";
+            }
         }
-        elsif ( is_validation_failure($res) ) {
-            push @errors, @{ $res->{errors} };
-            $nok = 1;
-            last CHECK;
-        }
-        elsif ( is_validation_success($res) ) {
-            $data = $res->{data};
-        }
-        else {
-            confess "Check returned unexpected value: '$res'";
-        }
-    }
-    return $nok
-        ? { success => 0, errors => \@errors }
-        : { success => 1, data => $data };
+        return $nok
+          ? { success => 0, errors => \@errors }
+          : { success => 1, data   => $data };
+    };
 }
+
+*validate_any = _validate_any();
+*validate_all = _validate_any(1);
 
 sub is_validation_success {
     my ($v) = @_;
@@ -649,6 +654,10 @@ from C<< validate_any >>.
 
     # yields
     { data => ["Adam"], success => 1 }
+
+=head2 validate_all
+
+Almost same as validate_any, only if there are more checks, all of them performed, even when some of them finishes with validation error.
 
 =head2 validate_array
 
